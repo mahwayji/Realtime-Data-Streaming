@@ -34,3 +34,5 @@ You can access into  Cassandra to do querying by do:
 ```
 docker exec -it cassandra cqlsh -u cassandra -p cassandra localhost 9042
 ```
+
+Note: This project is what I have learn and code along with from video [Realtime Data Streaming | End To End Data Engineering Project](https://www.youtube.com/watch?v=GqAcTrqKcrY) by CodeWithYu
