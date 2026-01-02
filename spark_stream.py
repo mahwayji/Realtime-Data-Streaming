@@ -1,6 +1,5 @@
 import logging 
 from datetime import datetime
-
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from pyspark.sql import SparkSession
@@ -36,13 +35,13 @@ def create_table(session):
     print("Table created successfully!")
     
 def insert_data(session, **kwargs):
+    import uuid
     print("inserting data...")
-    
-    user_id = kwargs.get('id')
+    user_id = uuid.uuid4()
     first_name = kwargs.get('first_name')
     last_name = kwargs.get('last_name')
     gender = kwargs.get('gender')
-    address = kwargs.get('address')
+    address = kwargs.get('location')
     postcode = kwargs.get('postcode')
     email = kwargs.get('email')
     username = kwargs.get('username')
@@ -65,40 +64,32 @@ def insert_data(session, **kwargs):
     
 
 def create_spark_connection():
-    s_conn = None
     try:
         s_conn = (SparkSession.builder
             .appName('SparkDataStreaming')
-            .config('spark.jars.packages', 
-                ",".join([
-                "org.apache.spark:spark-sql-kafka-0-10_2.13:3.4.1",
-                "com.datastax.spark:spark-cassandra-connector_2.13:3.4.1"
-            ]))
+            # .config('spark.jars.packages', 
+            #     "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1,"
+            #     "com.datastax.spark:spark-cassandra-connector_2.12:3.4.1"
+            # )
             .config('spark.cassandra.connection.host', 'localhost') 
             .getOrCreate())
-
         s_conn.sparkContext.setLogLevel("ERROR")
         logging.info("Spark connection created successfully!")
+        return s_conn
+
     except Exception as e:
-        logging.error(f"Couldn't create the spark session due to exception {e}")
-        
-    return s_conn
+        logging.error(f"Couldn't create the spark session due to exception {e}")    
+        return None
     
 def connection_to_kafka(spark_conn):
-    spark_df = None
-    try: 
-        spark_df = spark_conn.readStream \
-                .format('kafka') \
-                .option('kafka.bootstrap.servers', 'localhost:9092') \
-                .option('subscribe', 'users_created') \
-                .option('startingOffsets', 'earliest') \
-                .load()
-                
-        logging.info("kafka dataframe created successfully")
-    except Exception as e: 
-        logging.warning(f"kafka dataframe could not be created because: {e}")
-        
-    return spark_df 
+    return (
+        spark_conn.readStream
+        .format("kafka")
+        .option("kafka.bootstrap.servers", "localhost:9092")
+        .option("subscribe", "users_created")
+        .option("startingOffsets", "earliest")
+        .load()
+    )
     
 def create_selection_df_from_kafka(spark_df):
     schema = StructType([
@@ -106,7 +97,7 @@ def create_selection_df_from_kafka(spark_df):
         StructField("first_name", StringType(), False),
         StructField("last_name", StringType(), False),
         StructField("gender", StringType(), False),
-        StructField("address", StringType(), False),
+        StructField("location", StringType(), False),
         StructField("postcode", StringType(), False),
         StructField("email", StringType(), False),
         StructField("username", StringType(), False),
@@ -139,16 +130,13 @@ if __name__ == "__main__":
     if spark_conn is not None:  
         # Connect to kafka with spark connection
         spark_df = connection_to_kafka(spark_conn)
-        
-        if spark_df is None:
-            raise RuntimeError("Kafka DataFrame could not be created")
-            
         selection_df = create_selection_df_from_kafka(spark_df)
         session = create_cassandra_connection()
         
         if session is not None:
             create_keyspace(session)
             create_table(session)
+            logging.info("Streaming is being started...")
             
             streaming_query = selection_df.writeStream.format("org.apache.spark.sql.cassandra")\
                             .option("checkpointLocation", '/tmp/checkpoint')\

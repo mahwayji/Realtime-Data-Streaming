@@ -48,10 +48,9 @@ def stream_data():
     res = get_data()
     res = format_data(res)
     
-    producer.send('user_created', json.dumps(res).encode('utf-8'))
+    producer.send('users_created', json.dumps(res).encode('utf-8'))
     
     while True: 
-        print(time.time(), curr_time)
         if time.time() > curr_time + 60: # 1 minute
             break
         
@@ -59,7 +58,7 @@ def stream_data():
             res = get_data()
             res = format_data(res)
             
-            producer.send('user_created', json.dumps(res).encode('utf-8'))
+            producer.send('users_created', json.dumps(res).encode('utf-8'))
         
         except Exception as e:
             logging.error(f'An error occurred: {e}')
@@ -79,3 +78,4 @@ with DAG ('user_automation',
         python_callable=stream_data,
         execution_timeout=timedelta(minutes=2)
     )
+    
