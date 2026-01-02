@@ -22,7 +22,7 @@ def create_table(session):
                 last_name TEXT,
                 gender TEXT,
                 address TEXT,
-                post_code TEXT,
+                postcode TEXT,
                 email TEXT,
                 username TEXT,
                 dob TEXT, 
@@ -41,7 +41,7 @@ def insert_data(session, **kwargs):
     first_name = kwargs.get('first_name')
     last_name = kwargs.get('last_name')
     gender = kwargs.get('gender')
-    address = kwargs.get('location')
+    address = kwargs.get('address')
     postcode = kwargs.get('postcode')
     email = kwargs.get('email')
     username = kwargs.get('username')
@@ -93,11 +93,10 @@ def connection_to_kafka(spark_conn):
     
 def create_selection_df_from_kafka(spark_df):
     schema = StructType([
-        StructField("id", StringType(), False),
         StructField("first_name", StringType(), False),
         StructField("last_name", StringType(), False),
         StructField("gender", StringType(), False),
-        StructField("location", StringType(), False),
+        StructField("address", StringType(), False),
         StructField("postcode", StringType(), False),
         StructField("email", StringType(), False),
         StructField("username", StringType(), False),
